@@ -1,15 +1,16 @@
-# Model artifacts
-artifacts/
-*.pkl
-
 # Datos pesados
-data/raw/
-data/prep/        # opcional, si quieres que prep se regenere en cada máquina
-data/inference/   # los datos de test que usas para batch
-data/predictions/ # los resultados de predicciones
+data/raw/*.csv
+data/raw/*.xlsx
+
+data/prep/*.csv  
+data/prep/*.xlsx 
+data/inference/*.csv  
+data/inference/ *.xlsx
+data/predictions/*.csv  
+data/predictions/ *.xlsx
 
 # Modelos entrenados
-artifacts/
+*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
