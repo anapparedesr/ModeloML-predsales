@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+import json
+from pathlib import Path
+from train import train_and_evaluate
+
+# Paths que tengo que respetar (SM los pide)
+PREFIX      = Path("/opt/ml")
+INPUT_DATA  = PREFIX / "input" / "data" / "training"
+OUTPUT_MODEL= PREFIX / "model"
+HP_PATH     = PREFIX / "input" / "config" / "hyperparameters.json"
+
+# Para que lea los hiperparámetros enviados desde el estimador
+if HP_PATH.exists():
+    with open(HP_PATH) as f:
+        hyperparams = json.load(f)
+else:
+    hyperparams = {}
+
+# Se tienen que modificar porque los manda como strings
+
+n_estimators = int(hyperparams.get("n_estimators", 100))
+max_depth_raw = hyperparams.get("max_depth", "10")
+max_depth = None if max_depth_raw == "None" else int(max_depth_raw)
+random_seed = int(hyperparams.get("random_seed", 10))
+use_random_search = hyperparams.get("use_random_search", "false").lower() == "true"
+
+# Ejecuta el pipeline de entrenamiento
+train_and_evaluate(
+    prep_dir=INPUT_DATA,
+    artifacts_dir=OUTPUT_MODEL,
+    n_estimators=n_estimators,
+    max_depth=max_depth,
+    random_seed=random_seed,
+    use_random_search=use_random_search,
+)
