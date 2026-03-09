@@ -211,3 +211,54 @@ uv run pytest src/ -v
 | Preprocessing | `src/preprocessing/test/test_prep.py` | 9 |
 | Training | `src/training/test/test_train.py` | 7 |
 | Inference | `src/inference/test/test_inference.py` | 7 |
+
+---
+
+## AWS SageMaker BYOC (Bring Your Own Container) 
+
+Se desplegó el modelo Random Forest en Amazon SageMaker usando un contenedor propio y utilizando el dominio creado en clase. 
+
+### Estructura 
+
+Se utilizó un contenedor único que maneja tanto el training como el serving y su estructura es la siguiente: 
+
+```sh
+src/training/
+├── train        # Entry point de entrenamiento (SageMaker lo ejecuta al hacer fit())
+├── serve        # Entry point de serving (SageMaker lo ejecuta al levantar el endpoint)
+├── predictor.py # Servidor Flask con /ping e /invocations
+├── train.py     # Lógica de entrenamiento (Random Forest)
+└── Dockerfile   # Imagen única para train y serve
+```
+### Flujo
+
+```
+grid_model.csv (local)
+      ↓ subido a S3
+s3://ml-predsales-bucket/data/training/
+      ↓ SageMaker Training Job
+Modelo entrenado → s3://ml-predsales-bucket/output/
+      ↓ SageMaker Endpoint
+Inferencias en tiempo real vía POST /invocations
+```
+### Imagen en ECR
+
+![ImagenDocker](https://github.com/user-attachments/assets/0dd9fd2f-75a2-48bc-977e-f8f520cfe64c)
+
+### Training Job 
+
+- **Instancia:** ml.m5.large
+- **Datos:** 9,330,156 registros
+- **RMSE validación:** 0.7442
+- **Duración:** 325 segundos
+
+![TrainingAWS](https://github.com/user-attachments/assets/d715e613-0ecb-46f3-a5c9-e2ab108ff581)
+
+### Endopoint en tiempo real 
+
+![Endpoint](https://github.com/user-attachments/assets/2a656bbe-1947-434c-b568-8dddb0ab35b9)
+
+### Inferencias en tiempo real 
+
+![inferencias](https://github.com/user-attachments/assets/1a7cc67a-973e-4dad-9914-abeebdbfaaca)
+
