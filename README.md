@@ -211,3 +211,54 @@ uv run pytest src/ -v
 | Preprocessing | `src/preprocessing/test/test_prep.py` | 9 |
 | Training | `src/training/test/test_train.py` | 7 |
 | Inference | `src/inference/test/test_inference.py` | 7 |
+
+---
+
+## SageMaker Processing Job — BYOC
+
+Se implementó un Processing Job en Amazon SageMaker usando un container propio (BYOC) que ejecuta el preprocesamiento de los datos en la nube. 
+
+### Flujo de datos
+```
+S3 (sales_train.csv, items.csv)  →  /opt/ml/processing/input/  →  preprocess.py  →  /opt/ml/processing/output/  →  S3 (features listos)
+```
+
+### Transformaciones
+
+1. **Limpieza:** elimina registros con precio no positivo o unidades negativas.
+2. **Agregación mensual:** agrupa ventas diarias a nivel `date_block_num / shop_id / item_id` y clipea a 20.
+3. **Enriquecimiento:** agrega `item_category_id` desde `items.csv`.
+4. **Grid completo:** construye todas las combinaciones activas de shop/item/mes, rellenando con 0 donde no hubo ventas.
+5. **Lag features:** genera lags 1, 3, 6 y 12 meses del target.
+6. **Split temporal:** meses 0-32 para train, mes 33 para validación.
+
+### Dependencias del container
+
+| Librería | Versión |
+|---|---|
+| pandas | 3.0.1 |
+| scikit-learn | 1.8.0 |
+| numpy | 2.4.3 |
+| joblib | 1.5.3 |
+
+### Archivos de output en S3
+
+| Archivo | Descripción |
+|---|---|
+| `train/train_features.csv` | 8,906,058 registros — features meses 0-32 |
+| `train/train_labels.csv` | Labels de entrenamiento |
+| `test/test_features.csv` | 424,098 registros — features mes 33 |
+| `test/test_labels.csv` | Labels de validación |
+
+### Capturas de pantalla
+
+**Imagen publicada en Amazon ECR**
+
+
+**Processing Job completado en SageMaker**
+
+
+**Archivos de output en S3**
+
+
+**Inspección del output en el notebook**
