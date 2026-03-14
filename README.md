@@ -254,11 +254,21 @@ S3 (sales_train.csv, items.csv)  →  /opt/ml/processing/input/  →  preprocess
 
 **Imagen publicada en Amazon ECR**
 
+![AmazonECR](https://github.com/user-attachments/assets/a146d0a2-d9a3-4a9b-a26f-dc4b28ad81a6)
 
 **Processing Job completado en SageMaker**
 
+![ProcessingJob](https://github.com/user-attachments/assets/9862b706-1225-4035-9728-d77157b10614)
 
 **Archivos de output en S3**
 
+![Output_test](https://github.com/user-attachments/assets/45ba3ce3-7876-428e-98de-3e1adb12e764)
+
+![Output_train](https://github.com/user-attachments/assets/43269111-a0d3-4c8e-ae89-c552d890c354)
+
 
 **Inspección del output en el notebook**
+
+![ValidacionTRAIN](https://github.com/user-attachments/assets/d8c38a40-7ad2-476c-a033-494a7cde91a3)
+
+![ValidacionTEST](https://github.com/user-attachments/assets/66ad2c2c-383f-4420-b1e4-6557b901483b)
