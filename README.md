@@ -262,3 +262,65 @@ Inferencias en tiempo real vía POST /invocations
 
 ![inferencias](https://github.com/user-attachments/assets/1a7cc67a-973e-4dad-9914-abeebdbfaaca)
 
+---
+
+## SageMaker Processing Job — BYOC
+
+Se implementó un Processing Job en Amazon SageMaker usando un container propio (BYOC) que ejecuta el preprocesamiento de l
+os datos en la nube. 
+
+### Flujo de datos
+```
+S3 (sales_train.csv, items.csv)  →  /opt/ml/processing/input/  →  preprocess.py  →  /opt/ml/processing/output/  →  S3 (fea
+tures listos)
+```
+
+### Transformaciones
+
+1. **Limpieza:** elimina registros con precio no positivo o unidades negativas.
+2. **Agregación mensual:** agrupa ventas diarias a nivel `date_block_num / shop_id / item_id` y clipea a 20.
+3. **Enriquecimiento:** agrega `item_category_id` desde `items.csv`.
+4. **Grid completo:** construye todas las combinaciones activas de shop/item/mes, rellenando con 0 donde no hubo ventas.
+5. **Lag features:** genera lags 1, 3, 6 y 12 meses del target.
+6. **Split temporal:** meses 0-32 para train, mes 33 para validación.
+
+### Dependencias del container
+
+| Librería | Versión |
+|---|---|
+| pandas | 3.0.1 |
+| scikit-learn | 1.8.0 |
+| numpy | 2.4.3 |
+| joblib | 1.5.3 |
+
+### Archivos de output en S3
+
+| Archivo | Descripción |
+|---|---|
+| `train/train_features.csv` | 8,906,058 registros — features meses 0-32 |
+| `train/train_labels.csv` | Labels de entrenamiento |
+| `test/test_features.csv` | 424,098 registros — features mes 33 |
+| `test/test_labels.csv` | Labels de validación |
+
+### Capturas de pantalla
+
+**Imagen publicada en Amazon ECR**
+
+![AmazonECR](https://github.com/user-attachments/assets/a146d0a2-d9a3-4a9b-a26f-dc4b28ad81a6)
+
+**Processing Job completado en SageMaker**
+
+![ProcessingJob](https://github.com/user-attachments/assets/9862b706-1225-4035-9728-d77157b10614)
+
+**Archivos de output en S3**
+
+![Output_test](https://github.com/user-attachments/assets/45ba3ce3-7876-428e-98de-3e1adb12e764)
+
+![Output_train](https://github.com/user-attachments/assets/43269111-a0d3-4c8e-ae89-c552d890c354)
+
+
+**Inspección del output en el notebook**
+
+![ValidacionTRAIN](https://github.com/user-attachments/assets/d8c38a40-7ad2-476c-a033-494a7cde91a3)
+
+![ValidacionTEST](https://github.com/user-attachments/assets/66ad2c2c-383f-4420-b1e4-6557b901483b)
