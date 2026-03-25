@@ -324,3 +324,84 @@ tures listos)
 ![ValidacionTRAIN](https://github.com/user-attachments/assets/d8c38a40-7ad2-476c-a033-494a7cde91a3)
 
 ![ValidacionTEST](https://github.com/user-attachments/assets/66ad2c2c-383f-4420-b1e4-6557b901483b)
+
+---
+
+## SageMaker Pipeline BYOC — End-to-End
+
+Se implementó un pipeline completo de ML orquestado con Amazon SageMaker Pipelines, reutilizando los contenedores BYOC de las tareas anteriores. El pipeline es reproducible, parametrizable y usa exclusivamente imágenes propias en todos los steps.
+
+### Diagrama del pipeline
+
+```
+ProcessingStep (preprocess.py)
+        ↓
+TrainingStep (BYOC training container)
+        ↓
+ProcessingStep (evaluate.py)
+        ↓
+ConditionStep (RMSE ≤ rmse_threshold?)
+    ├── TRUE  → ModelStep (crear) → TransformStep → ModelStep (registrar)
+    └── FALSE → FailStep
+```
+
+### Steps del pipeline
+
+| # | Step | Tipo | Contenedor | Descripción |
+|---|------|------|------------|-------------|
+| 1 | PredSalesPreprocess | ProcessingStep | `1c-preprocessing` | Genera features de lag, split train/validation/test |
+| 2 | PredSalesTrain | TrainingStep | `ml-predsales-training` | Entrena Random Forest con RandomizedSearchCV |
+| 3 | PredSalesEval | ProcessingStep | `1c-preprocessing` | Calcula RMSE sobre el set de validación |
+| 4 | PredSalesRMSECond | ConditionStep | — | RMSE ≤ umbral → registra; si no → falla |
+| 5 | PredSalesCreateModel | ModelStep | `ml-predsales-training` | Crea el modelo para serving |
+| 6 | PredSalesTransform | TransformStep | `ml-predsales-training` | Batch transform sobre el test de Kaggle (mes 34) |
+| 7 | PredSalesRegisterModel | ModelStep | `ml-predsales-training` | Registra el modelo en el Model Registry |
+| 8 | PredSalesRMSEFail | FailStep | — | Termina el pipeline si el RMSE supera el umbral |
+
+### Parámetros del pipeline
+
+| Parámetro | Valor por defecto | Descripción |
+|-----------|-------------------|-------------|
+| `ProcessingInstanceCount` | 1 | Número de instancias de processing |
+| `TrainingInstanceType` | ml.m5.large | Tipo de instancia de training |
+| `ModelApprovalStatus` | PendingManualApproval | Estado de aprobación en el Model Registry |
+| `InputData` | s3://...1c-processing/input/raw/ | Datos crudos de entrada |
+| `BatchData` | s3://.../batch-input/ | Datos para batch transform |
+| `RmseThreshold` | 1.0 | Umbral de RMSE para registrar el modelo |
+
+### Infraestructura
+
+| Recurso | Valor |
+|---------|-------|
+| Processing instance | ml.m5.xlarge |
+| Training instance | ml.m5.large |
+| Duración total | 15 min 32 seg |
+| RMSE validación | 0.7442 |
+
+### Imágenes BYOC en ECR
+
+**Contenedor de preprocessing** (`1c-preprocessing:latest`)
+
+<!-- Arrastra aquí el screenshot de la imagen en ECR -->
+
+**Contenedor de training** (`ml-predsales-training:latest`)
+
+<!-- Arrastra aquí el screenshot de la imagen en ECR -->
+
+### Ejecución del pipeline
+
+**Pipeline completado con status `Succeeded`**
+
+<!-- Arrastra aquí el screenshot de la consola de SageMaker Pipelines -->
+
+### Artefactos en S3
+
+**Datos procesados, model artifact y output del batch transform**
+
+<!-- Arrastra aquí el screenshot de los archivos en S3 -->
+
+### Model Registry
+
+**Modelo registrado en `PredSalesModelPackageGroup`**
+
+<!-- Arrastra aquí el screenshot del Model Registry -->
