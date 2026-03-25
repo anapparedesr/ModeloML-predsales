@@ -382,26 +382,28 @@ ConditionStep (RMSE ≤ rmse_threshold?)
 
 **Contenedor de preprocessing** (`1c-preprocessing:latest`)
 
-<!-- Arrastra aquí el screenshot de la imagen en ECR -->
+![preprocess ecr](https://github.com/user-attachments/assets/5cb14588-5974-468d-bbb0-ad44ddd8e5a3)
 
 **Contenedor de training** (`ml-predsales-training:latest`)
 
-<!-- Arrastra aquí el screenshot de la imagen en ECR -->
+![training ECR](https://github.com/user-attachments/assets/a571a78d-9b52-42d9-8187-47e16c374340)
 
 ### Ejecución del pipeline
 
 **Pipeline completado con status `Succeeded`**
 
-<!-- Arrastra aquí el screenshot de la consola de SageMaker Pipelines -->
+![pipeline succed1](https://github.com/user-attachments/assets/49e07e7a-d260-45c9-a729-ee463990c4d2)
+
+![pipeline succed2](https://github.com/user-attachments/assets/b8427d8c-5f4e-4a5c-a93d-2fa9d443a37f)
 
 ### Artefactos en S3
 
 **Datos procesados, model artifact y output del batch transform**
 
-<!-- Arrastra aquí el screenshot de los archivos en S3 -->
+![s3](https://github.com/user-attachments/assets/30e5fb78-300f-4b06-a03f-62fcb7f8f94a)
 
 ### Model Registry
 
 **Modelo registrado en `PredSalesModelPackageGroup`**
 
-<!-- Arrastra aquí el screenshot del Model Registry -->
+![model registry](https://github.com/user-attachments/assets/9e1bf9aa-d370-4b90-ad0f-f543083992cb)
