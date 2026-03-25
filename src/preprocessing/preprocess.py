@@ -11,8 +11,8 @@ COLUMN_PRICE       = "item_price"
 CLIP               = 20
 LAGS               = [1, 3, 6, 12]
 
-MONTH_TRAIN_END    = 31   # meses 0–31 → train
-MONTH_VAL          = 32   # mes 32     → validation
+MONTH_TRAIN_END    = 32   # meses 0–32 → train
+MONTH_VAL          = 33   # mes 33     → validation
 MONTH_TEST_BLOCK   = 33   # mes 33     → usado para generar features del test de Kaggle
 
 
@@ -99,15 +99,22 @@ if __name__ == "__main__":
     lag_cols = ["lag_{}".format(l) for l in LAGS]
     grid = grid.dropna(subset=lag_cols)
     print("After filtering incomplete cases: {} records".format(len(grid)))
+    print("Meses después de dropna: {}".format(sorted(grid["date_block_num"].unique())))
 
+    
     # ── 8. Splits temporales: train / validation ──────────────────────────────
+    print("Meses en grid antes del split: {}".format(sorted(grid["date_block_num"].unique())))
+    print("Total records: {}".format(len(grid)))
+    
     feature_cols = ["date_block_num", "shop_id", "item_id", "item_category_id"] + lag_cols
 
     X_train = grid[grid["date_block_num"] <= MONTH_TRAIN_END][feature_cols]
     y_train = grid[grid["date_block_num"] <= MONTH_TRAIN_END][COLUMN_UNITS_MONTH]
+    
+    max_month = grid["date_block_num"].max()
+    X_val = grid[grid["date_block_num"] == max_month][feature_cols]
+    y_val = grid[grid["date_block_num"] == max_month][COLUMN_UNITS_MONTH]
 
-    X_val   = grid[grid["date_block_num"] == MONTH_VAL][feature_cols]
-    y_val   = grid[grid["date_block_num"] == MONTH_VAL][COLUMN_UNITS_MONTH]
 
     print("Train shape:      {}".format(X_train.shape))
     print("Validation shape: {}".format(X_val.shape))
@@ -159,15 +166,19 @@ if __name__ == "__main__":
     # ── 10. Guarda los outputs ─────────────────────────────────────────────────
     print("Saving outputs...")
 
-    X_train.to_csv(os.path.join(train_dir,      "train_features.csv"),      header=False, index=False)
-    y_train.to_csv(os.path.join(train_dir,      "train_labels.csv"),        header=False, index=False)
+    # Train: features + target juntos (formato que espera train.py)
+    train_df = grid[grid["date_block_num"] <= MONTH_TRAIN_END][feature_cols + [COLUMN_UNITS_MONTH]]
+    train_df.to_csv(os.path.join(train_dir, "grid_model.csv"), index=False)
 
-    X_val.to_csv(  os.path.join(validation_dir, "validation_features.csv"), header=False, index=False)
-    y_val.to_csv(  os.path.join(validation_dir, "validation_labels.csv"),   header=False, index=False)
+    # Validation: igual, features + target juntos
+    max_month = grid["date_block_num"].max()
+    val_df = grid[grid["date_block_num"] == max_month][feature_cols + [COLUMN_UNITS_MONTH]]
+    val_df.to_csv(os.path.join(validation_dir, "grid_model.csv"), index=False)
 
-    X_test.to_csv( os.path.join(test_dir,       "test_features.csv"),       header=False, index=False)
+    # Test: solo features (sin labels, es el test de Kaggle)
+    X_test.to_csv(os.path.join(test_dir, "test_features.csv"), header=False, index=False)
 
     print("Preprocessing complete.")
-    print("  train:      {} records".format(len(X_train)))
-    print("  validation: {} records".format(len(X_val)))
+    print("  train:      {} records".format(len(train_df)))
+    print("  validation: {} records".format(len(val_df)))
     print("  test:       {} records".format(len(X_test)))

@@ -81,38 +81,21 @@ def load_prepared_data(prep_dir: Path) -> pd.DataFrame:
 
 # -----
 # Splitting data function
-def split_data(
-    grid_model: pd.DataFrame,
-    month_train: int = MONTH_TRAIN,
-    month_val: int = MONTH_VAL,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Split the prepared dataset into training and validation sets based on date_block_num.
 
-    Parameters:
-    ---
-    grid_model: pd.DataFrame
-        DataFrame with lag features and target variable.
-    month_train: int
-        Last month to include in the training set (inclusive).
-    month_val: int
-        Month to use as the validation set.
-
-    Returns:
-    ---
-    tuple[pd.DataFrame, pd.DataFrame]
-        (training_grid, validation_grid)
-    """
+def split_data(grid_model, month_train=MONTH_TRAIN):
     train_grid = grid_model[grid_model["date_block_num"] <= month_train].copy()
-    val_grid = grid_model[grid_model["date_block_num"] == month_val].copy()
-    logger.info(
-        "Train set: %s records (months 0–%s)", f"{len(train_grid):,}", month_train
-    )
-    logger.info(
-        "Validation set: %s records (month %s)", f"{len(val_grid):,}", month_val
-    )
-    return train_grid, val_grid
 
+    max_month = grid_model["date_block_num"].max()
+    val_grid = grid_model[grid_model["date_block_num"] == max_month].copy()
+
+    if val_grid.empty:
+        logger.warning("Validation set is empty. Using fallback sample.")
+        val_grid = grid_model.sort_values("date_block_num").tail(1000)
+
+    logger.info(f"Train size: {len(train_grid)}")
+    logger.info(f"Validation size: {len(val_grid)} (month {max_month})")
+
+    return train_grid, val_grid
 
 def features_and_target(
     grid: pd.DataFrame,
@@ -311,7 +294,7 @@ def train_and_evaluate(
     n_estimators: int = N_ESTIMATORS,
     max_depth: int = MAX_DEPTH,
     random_seed: int = RANDOM_SEED,
-    use_random_search: bool = True,
+    use_random_search: bool = False,
 ) -> float:
     """
     Execute the full training and evaluation pipeline:
@@ -362,7 +345,11 @@ def train_and_evaluate(
             max_depth = best_params.get("max_depth", max_depth)
 
         model = train_model(features_train, target_train, n_estimators, max_depth, random_seed)
-        rmse = calculate_rmse(model, features_val, target_val)
+        if len(features_val) == 0:
+            logger.warning("Skipping RMSE calculation because validation set is empty.")
+            rmse = float("nan")
+        else:
+            rmse = calculate_rmse(model, features_val, target_val)
 
         save_model(model, artifacts_dir)
 

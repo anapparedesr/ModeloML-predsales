@@ -20,27 +20,25 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 
-
 # ── Constantes ────────────────────────────────────────────────────────────────
-FEATURE_COLS = ["date_block_num", "shop_id", "item_id", "item_category_id",
-                "lag_1", "lag_3", "lag_6", "lag_12"]
-CLIP         = 20
-
+FEATURE_COLS = ["lag_1", "lag_3", "lag_6", "lag_12"]
+CLIP = 20
 
 if __name__ == "__main__":
 
     # ── Rutas SageMaker ───────────────────────────────────────────────────────
-    model_dir      = "/opt/ml/processing/input/model"
-    test_dir       = "/opt/ml/processing/input/test"
-    output_dir     = "/opt/ml/processing/output/evaluation"
+    model_dir  = "/opt/ml/processing/input/model"
+    test_dir   = "/opt/ml/processing/input/test"
 
+    print("Archivos en test_dir:", os.listdir(test_dir))
+    output_dir = "/opt/ml/processing/output/evaluation"
     pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     # ── 1. Carga el modelo ────────────────────────────────────────────────────
     print("Loading model...")
     model_path = os.path.join(model_dir, "model.tar.gz")
     with tarfile.open(model_path) as tar:
-        tar.extractall(path="/tmp/model")
+        tar.extractall(path="/tmp/model")  # cuidado con Python 3.14 y el warning de metadata
 
     # Busca el archivo .pkl dentro del tar
     model_file = None
@@ -48,24 +46,20 @@ if __name__ == "__main__":
         if fname.endswith(".pkl"):
             model_file = os.path.join("/tmp/model", fname)
             break
-
     if model_file is None:
         raise FileNotFoundError("No .pkl file found in model.tar.gz")
 
     model = joblib.load(model_file)
-    print("Model loaded: {}".format(model_file))
+    print(f"Model loaded: {model_file}")
 
-    # ── 2. Carga los datos de validación ──────────────────────────────────────
+    # ── 2. Carga los datos de validación ─────────────────────────────────────
     print("Loading validation data...")
-    features_path = os.path.join(test_dir, "validation_features.csv")
-    labels_path   = os.path.join(test_dir, "validation_labels.csv")
-
-    X_val = pd.read_csv(features_path, header=None, names=FEATURE_COLS)
-    y_val = pd.read_csv(labels_path,   header=None, names=["item_cnt_month"])
-
-    y_val_clipped = y_val["item_cnt_month"].clip(0, CLIP)
-
-    print("Validation set: {} records".format(len(X_val)))
+    features_path = os.path.join(test_dir, "grid_model.csv")
+    ALL_COLS = ["date_block_num", "shop_id", "item_id", "item_category_id",
+                "lag_1", "lag_3", "lag_6", "lag_12", "item_cnt_month"]
+    df_val = pd.read_csv(features_path, names=ALL_COLS, header=0)
+    X_val = df_val[["lag_1", "lag_3", "lag_6", "lag_12"]]
+    y_val_clipped = df_val["item_cnt_month"].clip(0, CLIP)
 
     # ── 3. Genera predicciones y calcula RMSE ────────────────────────────────
     print("Generating predictions...")
@@ -73,13 +67,12 @@ if __name__ == "__main__":
     predictions_clipped = np.clip(predictions, 0, CLIP)
 
     rmse = float(np.sqrt(mean_squared_error(y_val_clipped, predictions_clipped)))
-    std  = float(np.std(y_val_clipped.values - predictions_clipped))
+    std = float(np.std(y_val_clipped.values-predictions_clipped))
 
-    print("Validation RMSE: {:.4f}".format(rmse))
-    print("Std deviation:   {:.4f}".format(std))
+    print(f"Validation RMSE: {rmse:.4f}")
+    print(f"Std deviation:   {std:.4f}")
 
     # ── 4. Escribe evaluation.json ────────────────────────────────────────────
-    # Formato que espera el ConditionStep del pipeline
     report = {
         "regression_metrics": {
             "rmse": {
@@ -93,5 +86,5 @@ if __name__ == "__main__":
     with open(evaluation_path, "w") as f:
         json.dump(report, f)
 
-    print("Evaluation report saved to: {}".format(evaluation_path))
+    print(f"Evaluation report saved to: {evaluation_path}")
     print("Done.")
